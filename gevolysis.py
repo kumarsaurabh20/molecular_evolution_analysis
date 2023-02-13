@@ -45,8 +45,7 @@ def check_folder(folder, remove=False):
 		os.mkdir(folder)
 		print("{} is created!".format(folder))
 	else:
-		print("{} folder does not exist!".format(folder))
-		sys.exit()
+		sys.exit("{} folder does not exist!".format(folder))
 
 
 def prep_scp_file(full_ortho_file, scp_file):
@@ -106,8 +105,7 @@ def trim_alignments():
 	if is_tool('bmge'):
 		pass
 	else:
-		print("BMGE could not be found!")
-		sys.exit()
+		sys.exit("BMGE could not be found!")
 	
 	for filename in glob.glob(work_dir + "/*.aln.fasta"):
 		index = os.path.basename(filename).split('.', 1)[0]
@@ -126,17 +124,14 @@ def codon_alignments():
 		if os.path.isfile(pal2nal_script):
 			pass
 		else:
-			print("PAL2NAL perl script does not exist!")
-			sys.exit()
+			sys.exit("PAL2NAL perl script does not exist!")
 	else:
-		print("PAL2NAL folder does not exist!")
-		sys.exit()
+		sys.exit("PAL2NAL perl script does not exist!")
 	fasta_file_path = base_dir_path + "/alignments"
 	if os.path.isdir(fasta_file_path):
 		pass
 	else:
-		print("Alignments folder does not exist!")
-		sys.exit()
+		sys.exit("Alignments folder does not exist!")
 	
 
 	for filename in glob.glob(fasta_file_path + "/*.m.fasta"):	
@@ -183,8 +178,7 @@ def generate_trees():
 	if os.path.isdir(work_dir):
 		pass
 	else:
-		print("Alignments folder does not exist!")
-		sys.exit()
+		sys.exit("Alignments folder does not exist!")
         #
 	tree_dir = base_dir_path + "/trees"
 	if os.path.isdir(tree_dir):
@@ -210,8 +204,7 @@ def generate_trees():
 			if is_tool('iqtree'):
 				pass
 			else:
-				print("IQtree executable was not found!")
-				sys.exit()
+				sys.exit("IQtree executable was not found!")
 				
 			subprocess.call(["iqtree", "-s", outfile])
 	#
@@ -227,15 +220,13 @@ def main():
 		print("Ortho file: {}".format(orthogroups_file))
 		print("SC file: {}".format(orthogroups_sc_file))
 	else:
-		print("ERROR: Ortho and list of single copy OG were not found!")
-		sys.exit()
+		sys.exit("ERROR: Ortho and list of single copy OG were not found!")
 	
 	cwd = os.getcwd()
 	if os.path.isfile(cwd + "/combined.p.fasta") and os.path.isfile(cwd + "/combined.p.fasta"):
 		pass
 	else:
-		print("Combined AA and nuc files are missing!")
-		sys.exit()
+		sys.exit("Combined AA and nuc files are missing!")
 
 	scp_df = prep_scp_file(orthogroups_file[0], orthogroups_sc_file[0])	
 	prep_files(scp_df, "combined.p.fasta", dna=False)
