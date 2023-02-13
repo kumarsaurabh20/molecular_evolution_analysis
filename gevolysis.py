@@ -12,11 +12,28 @@ from Bio import AlignIO
 
 ##grep -f Orthogroups_SingleCopyOrthologues.txt Orthogroups.tsv > single_copy_orthologues.list
 
+def get_args():
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-ROF','--run_OF', default=False, required=True, choices=[True, False], type=bool, help='Default: True. If True then Program will run OrthoFinder program to find orthologues between species.')
+	parser.add_argument('-hpc', '--hpc', default=False, required=True, choices=[True, False], type=bool, help='Use the script provided with the program to run OF. If its False and -ROF is True the program will run OF on the available local server.')
+	return parser.parse_args()
+
 def is_tool(name):
 	"""Check whether `name` is on PATH and marked as executable."""
 	# from whichcraft import which
 	from shutil import which
 	return which(name) is not None
+
+def run_orthofinder(data_folder_path, hcp=False):
+	
+	if hcp == True:
+		cwd = os.getcwd()
+		script = cwd + "orthofinder.sh"
+		subprocess.call(["sbatch", script])		
+	else:
+		subprocess.call(["orthofinder", "-f", data_folder_path])
+	return
+
 
 def check_folder(folder, remove=False):
 	
@@ -37,16 +54,14 @@ def prep_scp_file(full_ortho_file, scp_file):
 	columns = full_OG_df.columns
 	scp_list_df = pd.read_csv(scp_file, sep="\t", names=["Orthogroup"], header=None)
 	merged_df = pd.merge(scp_list_df, full_OG_df, on="Orthogroup", how="inner")
-	return merged_df, columns
+	merged_df.set_index("Orthogroup", inplace=True)
+	return merged_df
 
 
 def prep_files(sco, combined_fastas, dna=False):
 	cwd = os.getcwd()
 	path = cwd + "/alignments"
 	check_folder(path)
-
-	#sco.columns = columns
-	sco.set_index("Orthogroup", inplace=True)
 	#
 	if dna == True:
 		for index, row in sco.iterrows():
@@ -139,7 +154,7 @@ def codon_alignments():
 
 def concatenate_file(destination_folder="", outfilename="", pattern="", path=None):
 	
-	print("Concatenating {}s ...".format(filetype))
+	print("Concatenating {}s ...".format(destination_folder))
 	script = os.path.realpath(__file__)
 	base_dir_path = os.path.dirname(script)
 	#
@@ -202,23 +217,42 @@ def generate_trees():
 	#
 
 def main():
-	scp_df = prep_scp_file("Orthogroups.tsv", "Orthogroups_SingleCopyOrthologues.txt")	
+	
+	print("Looking for input files...")	
+	orthogroups_file = glob.glob('**/Orthogroups.tsv', recursive=True)
+	orthogroups_sc_file = glob.glob('**/Orthogroups_SingleCopyOrthologues.txt', recursive=True)
+	
+	##File Checks
+	if orthogroups_file and orthogroups_sc_file:
+		print("Ortho file: {}".format(orthogroups_file))
+		print("SC file: {}".format(orthogroups_sc_file))
+	else:
+		print("ERROR: Ortho and list of single copy OG were not found!")
+		sys.exit()
+	
+	cwd = os.getcwd()
+	if os.path.isfile(cwd + "/combined.p.fasta") and os.path.isfile(cwd + "/combined.p.fasta"):
+		pass
+	else:
+		print("Combined AA and nuc files are missing!")
+		sys.exit()
+
+	scp_df = prep_scp_file(orthogroups_file[0], orthogroups_sc_file[0])	
 	prep_files(scp_df, "combined.p.fasta", dna=False)
+	prep_files(scp_df, "combined.m.fasta", dna=True)
 	perform_alignments()
 	trim_alignments()
-	prep_files(scp_df, "combined.m.fasta", dna=True)
 	codon_alignments()	
 	concatenate_file(destination_folder="alignments", outfilename="combined.paml.fasta", pattern="*.paml.fasta", path=None)
-	generate_trees()
-	concatenate_file(destination_folder="trees", outfilename="combined.tree.nwk", pattern="*.treefile", path=None)
+	if len(scp_df.axes[1]) > 2:
+		generate_trees()
+		concatenate_file(destination_folder="trees", outfilename="combined.tree.nwk", pattern="*.treefile", path=None)
+	else:
+		print("ISSUE::Trees can only be generated if species count is more than 2!")
+	
 	return 
 
 if __name__ == "__main__":
 
-	#cwd = os.getcwd()
-        #script = os.path.realpath(__file__)
-        #path = cwd + "/" + "Data"
-	#OF_dir = "OrthoFinder/Results_Jan13/Orthogroups"	
-	#file_path = cwd + path + "/" OF_dir
-
+	Options = get_args()
 	main()
